@@ -22,6 +22,7 @@
 #include "postmaster/syslogger.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
+#include "storage/signalfuncs.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
 #include "utils/fmgrprotos.h"
@@ -133,9 +134,9 @@ pg_signal_backend(int pid, int sig)
  * Note that only superusers can signal superuser-owned processes.
  */
 Datum
-pg_cancel_backend(PG_FUNCTION_ARGS)
+pg_cancel_backend_impl(int pid)
 {
-	int			r = pg_signal_backend(PG_GETARG_INT32(0), SIGINT);
+	int			r = pg_signal_backend(pid, SIGINT);
 
 	if (r == SIGNAL_BACKEND_NOSUPERUSER)
 		ereport(ERROR,
@@ -159,6 +160,12 @@ pg_cancel_backend(PG_FUNCTION_ARGS)
 						   "pg_signal_backend")));
 
 	PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
+}
+
+Datum
+pg_cancel_backend(PG_FUNCTION_ARGS)
+{
+	return pg_cancel_backend_impl(PG_GETARG_INT32(0));
 }
 
 /*
@@ -234,14 +241,9 @@ pg_wait_until_termination(int pid, int64 timeout)
  * Note that only superusers can signal superuser-owned processes.
  */
 Datum
-pg_terminate_backend(PG_FUNCTION_ARGS)
+pg_terminate_backend_impl(int pid, int timeout)
 {
-	int			pid;
-	int			r;
-	int			timeout;		/* milliseconds */
-
-	pid = PG_GETARG_INT32(0);
-	timeout = PG_GETARG_INT64(1);
+	int r;
 
 	if (timeout < 0)
 		ereport(ERROR,
@@ -276,6 +278,18 @@ pg_terminate_backend(PG_FUNCTION_ARGS)
 		PG_RETURN_BOOL(pg_wait_until_termination(pid, timeout));
 	else
 		PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
+}
+
+Datum
+pg_terminate_backend(PG_FUNCTION_ARGS)
+{
+	int			pid;
+	int			timeout;		/* milliseconds */
+
+	pid = PG_GETARG_INT32(0);
+	timeout = PG_GETARG_INT64(1);
+
+	return pg_terminate_backend_impl(pid, timeout);
 }
 
 /*

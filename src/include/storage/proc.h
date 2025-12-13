@@ -77,6 +77,9 @@ struct XidCache
  */
 #define		PROC_XMIN_FLAGS (PROC_IN_VACUUM | PROC_IN_SAFE_IC)
 
+/* including the termination null byte */
+#define		PROC_TERM_REASON_MAX_LEN 32
+
 /*
  * We allow a limited number of "weak" relation locks (AccessShareLock,
  * RowShareLock, RowExclusiveLock) to be recorded in the PGPROC structure
@@ -300,6 +303,9 @@ struct PGPROC
 	TransactionId procArrayGroupMemberXid;
 
 	uint32		wait_event_info;	/* proc's wait information */
+
+	/* additional info when termination signal sending */
+	char		termReasonStr[PROC_TERM_REASON_MAX_LEN];
 
 	/* Support for group transaction status update. */
 	bool		clogGroupMember;	/* true, if member of clog group */

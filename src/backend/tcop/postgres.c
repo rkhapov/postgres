@@ -3356,9 +3356,17 @@ ProcessInterrupts(void)
 			proc_exit(0);
 		}
 		else
-			ereport(FATAL,
+		{
+			if (MyProc->termReasonStr[0] == '\0')
+				ereport(FATAL,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
 					 errmsg("terminating connection due to administrator command")));
+			else
+				ereport(FATAL,
+					(errcode(ERRCODE_ADMIN_SHUTDOWN),
+					 errmsg("terminating connection due to administrator command: %s",
+							MyProc->termReasonStr)));
+		}
 	}
 
 	if (CheckClientConnectionPending)
@@ -3466,9 +3474,19 @@ ProcessInterrupts(void)
 		if (!DoingCommandRead)
 		{
 			LockErrorCleanup();
-			ereport(ERROR,
-					(errcode(ERRCODE_QUERY_CANCELED),
-					 errmsg("canceling statement due to user request")));
+			if (MyProc->termReasonStr[0] == '\0')
+				ereport(ERROR,
+						(errcode(ERRCODE_QUERY_CANCELED),
+						 errmsg("canceling statement due to user request")));
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_QUERY_CANCELED),
+						 errmsg("canceling statement due to user request: %s",
+							MyProc->termReasonStr)));
+
+				memset(MyProc->termReasonStr, 0, sizeof(MyProc->termReasonStr));
+			}
 		}
 	}
 
