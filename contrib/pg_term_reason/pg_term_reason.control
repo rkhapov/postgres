@@ -1,0 +1,5 @@
+# pg_term_reason extension
+comment = 'extension to terminate backends with additional reason string'
+default_version = '1.0'
+module_pathname = '$libdir/pg_term_reason'
+relocatable = true
